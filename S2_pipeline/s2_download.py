@@ -53,7 +53,7 @@ for tile_name in tiles:
         try:
             return response['access_token']
         except KeyError:
-            raise RuntimeError('Unable to get token. Response was {response}')
+            raise RuntimeError('Unable to get token. Response was {0}'.format(response))
 
 
     ids = [result['id'] for result in query_response.values()]

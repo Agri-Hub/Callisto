@@ -43,7 +43,8 @@ SETTINGS = {
 # Either update the credentials here, or create a credentials.py file defining the dict there
 CREDENTIALS = {
     'username': 'placeholder_username',
-    'password': 'placeholder_password'
+    'password': 'placeholder_password',
+    'sudo_pass_bsc_vm': 'placeholder_sudo_pass_bsc_vm',
 }
 
 # Try to import the redacted credentials, if they exist

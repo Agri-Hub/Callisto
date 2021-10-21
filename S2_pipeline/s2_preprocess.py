@@ -2,11 +2,12 @@ import zipfile
 import shutil
 from osgeo import gdal
 from utils import *
-from settings import SETTINGS
+from settings import SETTINGS, CREDENTIALS
 
 
-tiles  = SETTINGS['tiles']
-cnt    = len(tiles) # number of tiles
+tiles     = SETTINGS['tiles']
+sudo_pass = CREDENTIALS['sudo_pass_bsc_vm']
+cnt       = len(tiles) # number of tiles
 
 def basic_preprocess(ws_tmp):
 
@@ -122,7 +123,7 @@ def basic_preprocess(ws_tmp):
             for tif in glob(os.path.join(mon_path, '*.tif')):
                 rasterdate = tif.split('.')[0].split('/')[-1].split('_')[0][-6:-4]
                 if rasterdate == date:
-                    cmd = 'echo %s | sudo -S mv %s %s' % ('userdev', tif, os.path.join(mon_path, date))
+                    cmd = 'echo %s | sudo -S mv %s %s' % (sudo_pass, tif, os.path.join(mon_path, date))
                     os.system(cmd)
         for date in dates:
             mon_path2 = os.path.join(mon_path, date)

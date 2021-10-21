@@ -1,5 +1,6 @@
-import gdal, zipfile
+import zipfile
 import shutil
+from osgeo import gdal
 from utils import *
 from settings import SETTINGS
 

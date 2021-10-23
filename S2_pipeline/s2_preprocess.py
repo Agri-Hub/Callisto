@@ -141,7 +141,7 @@ def basic_preprocess(ws_tmp):
             logging.info('Removing process of intermediate files (8bit rasters) has been successfully finished')
 
 for tile in tiles:
-    ws_tmp = '{0}/2017/{1}'.format(SETTINGS['outdir'],tile)
+    ws_tmp = '{0}/2017/{1}'.format(SETTINGS['ws_dir'],tile)
     for month in os.listdir(ws_tmp):
         if "." in month:
             continue

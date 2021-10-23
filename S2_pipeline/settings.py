@@ -13,7 +13,9 @@
 #
 SETTINGS = {
     'tiles': ['31UFT'],
-    'outdir': '/home/callisto-noa/callisto/data/s2',
+    'download_outdir': '/home/callisto-noa/callisto/data/s2',
+    'ws_dir': '/home/callisto-noa/callisto/data/s2',
+    'shapefile': '/home/callisto-noa/callisto/data/shapefiles/lpis_dandrimond_area/lpis_dandrimond_3857.shp',
     'start_date': '2017-03-01',
     'end_date': '2017-11-30',
     'download_url': 'https://zipper.creodias.eu/download',

@@ -7,7 +7,7 @@ from pathlib import Path
 from settings import SETTINGS, CREDENTIALS
 
 tiles        = SETTINGS['tiles']
-outdir       = SETTINGS['outdir']
+outdir       = SETTINGS['download_outdir']
 start_date   = SETTINGS['start_date']
 end_date     = SETTINGS['end_date']
 download_url = SETTINGS['download_url']

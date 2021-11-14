@@ -81,24 +81,6 @@ print("Creating vrt file of VHR satellite bands ...")
 create_vrt(os.path.join(ws_tmp,'stack.vrt'), orderedbands)
 in_path_name_vrt = os.path.join(ws_tmp,'stack.vrt')
 
-#######
-# Let's try to burn the shp cloud mask to tif
-#######
-# Get the file (this needs to be automated somehow)
-cloudmask_file_in = os.path.join(os.getcwd(),'../Cloudmask/TRIPLESAT_3_L1_20170923094819_001237VI_008_0220170831001001_029.shp')
-cloudmask_file_shp_reprojected = os.path.join(os.getcwd(), '../Cloudmask/cloudmask.shp')
-cloudmask_file_out_tif = os.path.join(os.getcwd(), '../Cloudmask/cloudmask.tif')
-
-# Reproject the cloud mask to EPSG:3857
-os.system('ogr2ogr -t_srs EPSG:3857 {0} {1}'.format(cloudmask_file_shp_reprojected, cloudmask_file_in))
-
-# Convert the cloudmask shapefile to raster
-convert2Raster(cloudmask_file_shp_reprojected, cloudmask_file_out_tif)
-
-print("Converted to tiff")
-
-####
-
 bands = []
 # This loop should happen in the Cloudmask folder
 for root, dirs, files in sorted(os.walk(os.path.join(ws_tmp,'../Cloudmask/'))):

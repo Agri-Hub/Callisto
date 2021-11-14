@@ -95,3 +95,48 @@ def convert2Raster(shapefile, output_raster):
     # return
     return gdal.Open(output_raster)
 
+
+# Utility function to clip a raster based on the extent of another
+def clip_raster(input_tif_path, output_tif_path):
+    ''' Clip a raster (one band) - returns nothing'''
+
+    # Get extent of the input tif
+    xmin = extent.get('xmin')
+    ymin = extent.get('ymin')
+    xmax = extent.get('xmax')
+    ymax = extent.get('ymax')
+
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(3857)
+
+    in_ras = gdal.Open(os.path.join(img_dir, in_ras_file))
+    # in_ras = gdal.Open(in_ras_file)
+    gt = in_ras.GetGeoTransform()
+    inv_gt = gdal.InvGeoTransform(gt)
+
+    off_ulx, off_uly = map(int, gdal.ApplyGeoTransform(inv_gt, xmin, ymax))
+    off_lrx, off_lry = map(int, gdal.ApplyGeoTransform(inv_gt, xmax, ymin))
+
+    # changed for korea
+    #rows, columns = (off_lry - off_uly) + 1, (off_lrx - off_ulx) + 1
+    rows, columns = (off_lry - off_uly), (off_lrx - off_ulx)
+    in_band = in_ras.GetRasterBand(1)
+
+    driver = gdal.GetDriverByName('GTiff')
+    out_ds = driver.Create(os.path.join(img_dir, out_ras_file), columns, rows, 1, in_band.DataType)
+    out_ds.SetProjection(in_ras.GetProjection())
+    ulx, uly = gdal.ApplyGeoTransform(gt, off_ulx, off_uly)
+    out_gt = list(gt)
+    out_gt[0], out_gt[3] = ulx, uly
+    out_ds.SetGeoTransform(out_gt)
+
+    out_ds.GetRasterBand(1).WriteArray(in_band.ReadAsArray(off_ulx, off_uly, columns, rows))
+
+    del in_ras
+    del in_band
+    del out_ds
+
+    print('Clipping of {0} and {1} has been successfully finished'.format(out_ras_file))
+
+    return
+

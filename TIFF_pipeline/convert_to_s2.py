@@ -1,5 +1,6 @@
 
 from osgeo import gdal, osr
+from utils import *
 import numpy as np
 import os
 import pdb
@@ -47,7 +48,7 @@ for band in range(data.RasterCount):
 pdb.set_trace()
 
 ###########################################
-# Single-band filenames that will created #
+# Single-band filenames that were created #
 ###########################################
 VHR_native_band_filenames = {
     # before reprojecttion
@@ -57,6 +58,9 @@ VHR_native_band_filenames = {
     'NIR':   'TRIPLESAT_3_MS_L1_20170923094819_001237VI_008_0220170831001001_029_NIR.tif',
 }
 
+##########################################################
+# Single-band reprojected filenames that will be created #
+##########################################################
 VHR_repr_filenames = {
     # after reprojecttion
     'BLUE':  'TRIPLESAT_3_MS_L1_20170923094819_001237VI_008_0220170831001001_029_BLUE_3857.tif',
@@ -110,9 +114,6 @@ for f_input in VHR_native_band_filenames.values():
         dstSRS=s2_proj,
         resampleAlg='bilinear'
     )
-
-# Checkpoint
-pdb.set_trace()
 
 #########################
 # NDVI Creation attempt #
@@ -199,6 +200,39 @@ for x in range(0, xsize, block_xsize):
 
 out_savi = create_raster(gdal.Open(VHR_repr_filenames['RED']), os.path.join(os.getcwd(), VI_filenames['SAVI']), out_data, gdal.GDT_Int16, -9999)
 print("Finished SAVI calculation - TIFF file created")
+
+
+############################################
+# Clip rasters generated against cloudmask #
+############################################
+# Since there are slight differences in the size of the single-band tiffs and the cloudmask
+# provided we will clip them against on another. In fact, this was found to be the case with
+# the Dutch Orthophotos, it will not necessarily be a problem with the ESA CSC DAP data that
+# we got. Also it is not only a problem of the single-band reprojected tiffs that were generated
+# as a result of the processing to now, but it was also a problem with the original tif.
+
+# Let's initially convert the cloudmask to a tif file
+# Get the file paths (this needs to be automated)
+cloudmask_file_in = os.path.join(os.getcwd(),'../Cloudmask/TRIPLESAT_3_L1_20170923094819_001237VI_008_0220170831001001_029.shp')
+cloudmask_file_shp_reprojected = os.path.join(os.getcwd(), '../Cloudmask/cloudmask.shp')
+cloudmask_file_out_tif = os.path.join(os.getcwd(), '../Cloudmask/cloudmask.tif')
+
+# Reproject the cloud mask to EPSG:3857
+os.system('ogr2ogr -t_srs EPSG:3857 {0} {1}'.format(cloudmask_file_shp_reprojected, cloudmask_file_in))
+
+# Convert the cloudmask shapefile to raster
+convert2Raster(cloudmask_file_shp_reprojected, cloudmask_file_out_tif)
+
+print("Converted to tiff")
+
+####
+
+
+# Iterate through the tiffs we have created (both the bands and the vegetation indices)
+# for f in VHR_repr_filenames + VI_filenames:
+
+
+
 
 del red_ds
 del nir_ds

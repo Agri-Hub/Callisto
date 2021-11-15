@@ -96,47 +96,67 @@ def convert2Raster(shapefile, output_raster):
     return gdal.Open(output_raster)
 
 
+def get_extent(in_ras_file):
+    ''' Returns min_x, max_y, max_x, min_y'''
+
+    in_ras = gdal.Open(in_ras_file)
+    gt = in_ras.GetGeoTransform()
+    return (gt[0], gt[3], gt[0] + gt[1] * in_ras.RasterXSize, gt[3] + gt[5] * in_ras.RasterYSize)
+
+
 # Utility function to clip a raster based on the extent of another
-def clip_raster(input_tif_path, output_tif_path):
+def clip_raster(input_tif, clip_tif):
     ''' Clip a raster (one band) - returns nothing'''
 
-    # Get extent of the input tif
-    xmin = extent.get('xmin')
-    ymin = extent.get('ymin')
-    xmax = extent.get('xmax')
-    ymax = extent.get('ymax')
+    # Get the extent of the input tif
+    in_tif = gdal.Open(input_tif)
+    # We will need the GeoTransform and its inverse
+    in_gt = in_tif.GetGeoTransform()
+    in_inv_gt = gdal.InvGeoTransform(in_gt)
+    # Get its extent
+    in_xmin = in_gt[0]
+    in_xmax = in_xmin + (in_gt[1] * in_tif.RasterXSize)
+    in_ymin = in_gt[3] + (in_gt[5] * in_tif.RasterYSize)
+    in_ymax = in_gt[3]
+
+    # Same for the clip tiff
+    cl_tif = gdal.Open(clip_tif)
+    cl_gt = cl_tif.GetGeoTransform()
+    cl_inv_gt = gdal.InvGeoTransform(cl_gt)
+    cl_xmin = cl_gt[0]
+    cl_xmax = cl_xmin + (cl_gt[1] * cl_tif.RasterXSize)
+    cl_ymin = cl_gt[3] + (cl_gt[5] * cl_tif.RasterYSize)
+    cl_ymax = cl_gt[3]
 
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(3857)
 
-    in_ras = gdal.Open(os.path.join(img_dir, in_ras_file))
-    # in_ras = gdal.Open(in_ras_file)
-    gt = in_ras.GetGeoTransform()
-    inv_gt = gdal.InvGeoTransform(gt)
+    off_ulx, off_uly = map(int, gdal.ApplyGeoTransform(in_inv_gt, cl_xmin, cl_ymax))
+    off_lrx, off_lry = map(int, gdal.ApplyGeoTransform(in_inv_gt, cl_xmax, cl_ymin))
 
-    off_ulx, off_uly = map(int, gdal.ApplyGeoTransform(inv_gt, xmin, ymax))
-    off_lrx, off_lry = map(int, gdal.ApplyGeoTransform(inv_gt, xmax, ymin))
+    rows, columns = abs(off_lry - off_uly), abs(off_lrx - off_ulx)
+    in_band = in_tif.GetRasterBand(1)
 
-    # changed for korea
-    #rows, columns = (off_lry - off_uly) + 1, (off_lrx - off_ulx) + 1
-    rows, columns = (off_lry - off_uly), (off_lrx - off_ulx)
-    in_band = in_ras.GetRasterBand(1)
-
+    out_prefix = input_tif.split('/')[-1].split('.')[0]
+    out_suffix = input_tif.split('.')[-1]
+    out_tif = '{0}_clipped.{1}'.format(out_prefix,out_suffix)
     driver = gdal.GetDriverByName('GTiff')
-    out_ds = driver.Create(os.path.join(img_dir, out_ras_file), columns, rows, 1, in_band.DataType)
-    out_ds.SetProjection(in_ras.GetProjection())
-    ulx, uly = gdal.ApplyGeoTransform(gt, off_ulx, off_uly)
-    out_gt = list(gt)
+    out_ds = driver.Create(out_tif, columns, rows, 1, in_band.DataType)
+    pdb.set_trace()
+    out_ds.SetProjection(in_tif.GetProjection())
+    ulx, uly = gdal.ApplyGeoTransform(in_gt, off_ulx, off_uly)
+    out_gt = list(in_gt)
     out_gt[0], out_gt[3] = ulx, uly
     out_ds.SetGeoTransform(out_gt)
 
     out_ds.GetRasterBand(1).WriteArray(in_band.ReadAsArray(off_ulx, off_uly, columns, rows))
 
-    del in_ras
+    del in_tif
     del in_band
     del out_ds
 
-    print('Clipping of {0} and {1} has been successfully finished'.format(out_ras_file))
+    print('Clipping of {0} based on the extent ({1},{2},{3},{4}) has been successfully performed'
+            .format(input_tif.split('/')[-1],in_xmin,in_xmax,in_ymin,in_ymax))
 
     return
 

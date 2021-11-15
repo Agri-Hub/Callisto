@@ -44,8 +44,6 @@ for band in range(data.RasterCount):
             .format(input_file, band+1, file_prefix, band_names[band], file_suffix)
     )
 
-# Checkpoint
-pdb.set_trace()
 
 ###########################################
 # Single-band filenames that were created #
@@ -203,13 +201,10 @@ print("Finished SAVI calculation - TIFF file created")
 
 
 ############################################
-# Clip rasters generated against cloudmask #
+# Reproject cloudmask and convert to tiff #
 ############################################
-# Since there are slight differences in the size of the single-band tiffs and the cloudmask
-# provided we will clip them against on another. In fact, this was found to be the case with
-# the Dutch Orthophotos, it will not necessarily be a problem with the ESA CSC DAP data that
-# we got. Also it is not only a problem of the single-band reprojected tiffs that were generated
-# as a result of the processing to now, but it was also a problem with the original tif.
+# Cloudmask is currently an shp file. We'll convert it to a tiff and reproject it
+# to the EPSG:3857 projection that is used in the Scripts.
 
 # Let's initially convert the cloudmask to a tif file
 # Get the file paths (this needs to be automated)
@@ -223,15 +218,56 @@ os.system('ogr2ogr -t_srs EPSG:3857 {0} {1}'.format(cloudmask_file_shp_reproject
 # Convert the cloudmask shapefile to raster
 convert2Raster(cloudmask_file_shp_reprojected, cloudmask_file_out_tif)
 
-print("Converted to tiff")
+print("Cloudmask converted to tiff")
 
-####
 
+############################################
+# Clip rasters generated against cloudmask #
+############################################
+# Since there are slight differences in the size of the single-band tiffs and the cloudmask
+# provided we will clip them against on another. In fact, this was found to be the case with
+# the Dutch Orthophotos, it will not necessarily be a problem with the ESA CSC DAP data that
+# we got. Also it is not only a problem of the single-band reprojected tiffs that were generated
+# as a result of the processing to now, but it was also a problem with the original tif.
 
 # Iterate through the tiffs we have created (both the bands and the vegetation indices)
-# for f in VHR_repr_filenames + VI_filenames:
+# and clip them against the cloudmask.
 
+#### HELPERS FOR GDALWARP START
+# Get extent of one of the reprojected band tiffs
+# Get the extent of the cloudmask tif
+cl_tif = gdal.Open(os.path.join(os.getcwd(), '../Cloudmask/cloudmask.tif'))
+# We will need the GeoTransform and its inverse
+cl_gt = cl_tif.GetGeoTransform()
+cl_inv_gt = gdal.InvGeoTransform(cl_gt)
+# Get its extent
+cl_xmin = cl_gt[0]
+cl_xmax = cl_xmin + (cl_gt[1] * cl_tif.RasterXSize)
+cl_ymin = cl_gt[3] + (cl_gt[5] * cl_tif.RasterYSize)
+cl_ymax = cl_gt[3]
 
+#### HELPERS FOR GDALWARP END
+
+for f in list(VHR_repr_filenames.values()) + list(VI_filenames.values()):
+    # We'll do this in 2 steps
+    ###
+    # 1st -- Clip image based on the extent of the cloudmask
+    ###
+    # clip_raster(os.path.join(os.getcwd(),f), os.path.join(os.getcwd(),'../Cloudmask/cloudmask.tif'))
+    ### Trying warp
+    os.system('gdalwarp -te {0} {1} {2} {3} -tr 10 10 -r bilinear {4} {5}'
+        .format(
+            cl_xmin,
+            cl_ymin,
+            cl_xmax,
+            cl_ymax,
+            os.path.join(os.getcwd(),f),
+            f.split('.')[0] + '_intersection.tif'
+        )
+    )
+    print('Intersected file created: {0}'.format(f.split('.')[0] + '_intersection.tif'))
+    # print('Breaking ...')
+    # break
 
 
 del red_ds

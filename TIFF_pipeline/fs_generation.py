@@ -46,7 +46,7 @@ for root, dirs, files in sorted(os.walk(ws_tmp)):
     for tif in fnmatch.filter(files, '*.tif'):
         if any(x in tif for x in ['Jan', 'Feb']):
             continue
-        if re.match("(.*)(BLUE|GREEN|RED|NIR)(.*)(3857)(.*)", tif):
+        if re.match("(.*)(BLUE|GREEN|RED|NIR)(.*)(intersection)(.*)", tif):
             bands.append(os.path.join(root, tif))
             orderedbands.append('')
             print ('Matched: {}'.format(tif))
@@ -63,9 +63,9 @@ for item in bands:
     # key = item.split('.')[0].split('/')[-1].split('_')[1]
 
     # We just keep the filename without the extension, and then extract the (BLUE|GREEN|RED|NIR)
-    # We use [-2] in the last split because that is the 2nd from the end (as the filename
-    # ends -- curently -- with eg. RED_3857)
-    key = item.split('.')[0].split('/')[-1].split('_')[-2]
+    # We use [-3] in the last split because that is the 3rd from the end (as the filename
+    # ends -- curently -- with eg. RED_3857_intersection)
+    key = item.split('.')[0].split('/')[-1].split('_')[-3]
     orderedbands[order[key]+x*number_of_bands] = item
     if k%number_of_bands==0:
         x+=1
@@ -143,7 +143,7 @@ out_csv = os.path.join(ws_tmp, outname)
 ### Till here :+1:
 
 
-"""
+
 for band in range(ras.RasterCount):
     k_meta = 'Band_%d' % (band + 1)
     band_name = ras.GetRasterBand(band + 1).GetMetadata_Dict()[k_meta]
@@ -176,7 +176,7 @@ for band in range(ras.RasterCount):
     x[x > 0] = np.nan
     x[x == 0] = 1
     result = np.where(np.isnan(x), np.nan, values * x)
-
+"""
     del x
 
     i += 1

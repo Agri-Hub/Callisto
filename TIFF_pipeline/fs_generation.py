@@ -15,6 +15,7 @@ from utils import *
 import numpy as np
 import zipfile
 import fnmatch
+import csv
 import pdb
 import sys
 import os
@@ -122,63 +123,24 @@ second = []
 i = 0
 
 
-for nband in range(ras.RasterCount):
-    k_meta = 'Band_%d' % (nband + 1)
-    band_name = ras2.GetRasterBand(nband + 1).GetMetadata_Dict()[k_meta]
-    band_name = band_name.split('.')[0]
-    #print (band_name)
-
-
 out_csv = os.path.join(ws_tmp, outname)
-
-
-### TEMP INJECTION -- TRYING TO CLIP LAYERS AGAINST ONE ANOTHER
-
-# The tiff files
-
-## Cloudmask
-
-### TEMP INJECTION -- END
-
-### Till here :+1:
-
-
 
 for band in range(ras.RasterCount):
     k_meta = 'Band_%d' % (band + 1)
     band_name = ras.GetRasterBand(band + 1).GetMetadata_Dict()[k_meta]
-    # if ('BORI' in band_name or 'BARI' in band_name): #or not 'June' in band_name:
-    #     continue
+    print('Processing band: {0}'.format(band_name))
 
     values = ras.GetRasterBand(band + 1).ReadAsArray().astype(np.float32)
     clouded = ras2.GetRasterBand(band + 1).ReadAsArray().astype(np.float32)
-
-    # It looks like there are cases where the shape of the satellite data doesn't
-    # match the shape of the cloudmask. That's very annoying and it leads to the
-    # numpy calculations fail, as the one array cannot be projected onto the other.
-    # This seems to be a problem with the original data and not a result of the
-    # calculations.
-    # For the case I initially checked, the cloudmask was smaller than the actual
-    # data in size, ie:
-    #
-    #     > gdalinfo cloudmask.tif | grep -i size                                            
-    #     > Size is 5329, 4855
-    #
-    #     > gdalinfo TRIPLESAT_3_MS_L1_20170923094819_001237VI_008_0220170831001001_029_NIR_3857.tif | grep -i size
-    #     > Size is 5329, 4857
-    #
-    # In order to be able to move on, I believe that I should manually expand the
-    # smallest of the 2, ie the cloudmask in the above case, as cloudy values. Numpy's
-    # padding functionality will be used.
-    
 
     x = np.copy(clouded)
     x[x > 0] = np.nan
     x[x == 0] = 1
     result = np.where(np.isnan(x), np.nan, values * x)
-"""
-    del x
 
+    pdb.set_trace()
+
+    del x
     i += 1
 
     k_meta = 'Band_%d' % (band + 1)
@@ -205,13 +167,8 @@ for band in range(ras.RasterCount):
         geom = geom.ExportToWkt()
 
         id = feature.GetField(id_colname)
-        #code = feature.GetField("code")
-        #if not(code==1 or code==0):
-        #    continue
-        # code = 1
         if i == 1:
             first.append(id)
-            #second.append(code)
         parcel_data = [id]
         try:
             vect_tmp_drv = ogr.GetDriverByName('MEMORY')
@@ -229,7 +186,8 @@ for band in range(ras.RasterCount):
 
             off_ulx, off_uly = map(int, gdal.ApplyGeoTransform(inv_gt2, xmin, ymax))
             off_lrx, off_lry = map(int, gdal.ApplyGeoTransform(inv_gt2, xmax, ymin))
-            rows, columns = (off_lry - off_uly) + 1, (off_lrx - off_ulx) + 1
+            rows, columns = abs(off_lry - off_uly) + 1, abs(off_lrx - off_ulx) + 1
+            # pdb.set_trace()
             ras_tmp = gdal.GetDriverByName('MEM').Create('', columns, rows, 1, gdal.GDT_Byte)
             ras_tmp.SetProjection(ras2.GetProjection())
             ras_gt = list(gt2)
@@ -269,7 +227,7 @@ for band in range(ras.RasterCount):
 
             off_ulx2, off_uly2 = map(int, gdal.ApplyGeoTransform(inv_gt2, xmin, ymax))
             off_lrx2, off_lry2 = map(int, gdal.ApplyGeoTransform(inv_gt2, xmax, ymin))
-            rows2, columns2 = (off_lry2 - off_uly2) + 1, (off_lrx2 - off_ulx2) + 1
+            rows2, columns2 = abs(off_lry2 - off_uly2) + 1, abs(off_lrx2 - off_ulx2) + 1
             ras_tmp = gdal.GetDriverByName('MEM').Create('', columns2, rows2, 1, gdal.GDT_Byte)
             ras_tmp.SetProjection(ras.GetProjection())
             ras_gt = list(gt)
@@ -287,20 +245,13 @@ for band in range(ras.RasterCount):
 
             zone_ras_list = zone_ras_init.compressed().tolist()
             zone_ras_list2 = zone_ras.compressed()#.tolist()
-            # parcel_data.append(np.mean(zone_ras_list))
-            # parcel_data.append(cropid)
-            # writer.writerow(parcel_data)
-            # f[cnt][i] = str(np.mean(zone_ras_list))
-            # cnt+=1
 
             if perc > 0.8:
-                # col_list.append(-999999)
                 col_list.append(np.nan)
             else:
                 if np.all((zone_ras_list2 == np.nan)):
                     x = np.nan
                 else:
-                    # zone_ras_list2[zone_ras_list2 == -999999] = np.nan
                     x = np.nanmean(zone_ras_list2)
                     # if ('PSRI' in band_name and (x<-5000 or x>5000)) or np.isnan(x):
                     #     x = -999999
@@ -310,20 +261,6 @@ for band in range(ras.RasterCount):
                         x = np.nan
 
                 col_list.append(x)
-                # print np.nanmean(zone_ras_list2)
-            #' #''
-            #if perc > 0.8:
-                ##col_list.append(-999999)
-                #zone_ras_list2[zone_ras_list2 == -999999] = np.nan
-                #if (np.isnan(zone_ras_list2).all()):
-                    #col_list.append = -999999
-                #else:
-                    #col_list.append(np.nanmean(zone_ras_list2))
-            #else:
-                #zone_ras_list2[zone_ras_list2 == -999999] = np.nan
-                #col_list.append(np.nanmean(zone_ras_list2))
-                #print np.nanmean(zone_ras_list2)
-            #' ''
             del zone_ras_list
             del zone_ras_list2
             del zone_ras
@@ -331,16 +268,10 @@ for band in range(ras.RasterCount):
             col_list.append(np.nan)
             cnt += 1
             exc_type, exc_obj, exc_tb = sys.exc_info()
-            #logger.info('Line: %d,\t Type: %s,\t Message: %s', exc_tb.tb_lineno, exc_type, exc_obj)
             continue
 
-
-            # if exists==1:
-            # parcel_data.append(family)
-            # parcel_data.append(season)
     if i == 1:
         total.append(first)
-        #total.append(second)
     total.append(col_list)
 
     del values
@@ -354,4 +285,4 @@ with open(out_csv, 'w') as f:
         # print row
         writer.writerow(row)
 
-"""
+

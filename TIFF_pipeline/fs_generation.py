@@ -127,26 +127,26 @@ out_csv = os.path.join(ws_tmp, outname)
 
 for band in range(ras.RasterCount):
     k_meta = 'Band_%d' % (band + 1)
-    band_name = ras.GetRasterBand(band + 1).GetMetadata_Dict()[k_meta]
+    band_full_name = ras.GetRasterBand(band + 1).GetMetadata_Dict()[k_meta]
+    band_name = band_full_name.split('_')[4] + '_' + band_full_name.split('_')[9]
     print('Processing band: {0}'.format(band_name))
 
     values = ras.GetRasterBand(band + 1).ReadAsArray().astype(np.float32)
     clouded = ras2.GetRasterBand(band + 1).ReadAsArray().astype(np.float32)
 
+    pdb.set_trace()
+
     x = np.copy(clouded)
     x[x > 0] = np.nan
     x[x == 0] = 1
+    # Errors are being generated here for some cases where y is zero. I don't
+    # yet fully understand why though.
     result = np.where(np.isnan(x), np.nan, values * x)
 
     pdb.set_trace()
 
     del x
     i += 1
-
-    k_meta = 'Band_%d' % (band + 1)
-    band_name = ras.GetRasterBand(band + 1).GetMetadata_Dict()[k_meta]
-    print('LOG - Band: {}'.format(band_name))
-    band_name = band_name.split('.')[0]
 
     band_name2 = ras2.GetRasterBand(band + 1).GetMetadata_Dict()[k_meta]
     # print (band_name2)
@@ -186,7 +186,8 @@ for band in range(ras.RasterCount):
 
             off_ulx, off_uly = map(int, gdal.ApplyGeoTransform(inv_gt2, xmin, ymax))
             off_lrx, off_lry = map(int, gdal.ApplyGeoTransform(inv_gt2, xmax, ymin))
-            rows, columns = abs(off_lry - off_uly) + 1, abs(off_lrx - off_ulx) + 1
+            rows, columns = abs(off_lry - off_uly + 1), abs(off_lrx - off_ulx + 1)
+            # rows, columns = off_lry - off_uly + 1, off_lrx - off_ulx + 1
             # pdb.set_trace()
             ras_tmp = gdal.GetDriverByName('MEM').Create('', columns, rows, 1, gdal.GDT_Byte)
             ras_tmp.SetProjection(ras2.GetProjection())
@@ -227,7 +228,7 @@ for band in range(ras.RasterCount):
 
             off_ulx2, off_uly2 = map(int, gdal.ApplyGeoTransform(inv_gt2, xmin, ymax))
             off_lrx2, off_lry2 = map(int, gdal.ApplyGeoTransform(inv_gt2, xmax, ymin))
-            rows2, columns2 = abs(off_lry2 - off_uly2) + 1, abs(off_lrx2 - off_ulx2) + 1
+            rows2, columns2 = abs(off_lry2 - off_uly2 + 1), abs(off_lrx2 - off_ulx2 + 1)
             ras_tmp = gdal.GetDriverByName('MEM').Create('', columns2, rows2, 1, gdal.GDT_Byte)
             ras_tmp.SetProjection(ras.GetProjection())
             ras_gt = list(gt)

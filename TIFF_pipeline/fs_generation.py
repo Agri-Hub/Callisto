@@ -1,12 +1,6 @@
 
 # Feature Space Generation
 
-########
-# TODO #
-########
-# * Cloud mask? There is a folder with the name "Cloudmask" holding shapefiles.
-#   How do we use it?
-
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -135,19 +129,8 @@ for band in range(ras.RasterCount):
     print('Processing band: {0}'.format(band_name))
 
     values = ras.GetRasterBand(band + 1).ReadAsArray().astype(np.float32)
-    # clouded = ras2.GetRasterBand(band + 1).ReadAsArray().astype(np.float32)
-
-    # Is this really needed?
-    # x = np.copy(clouded)
-    # x[x > 0] = np.nan
-    # x[x == 0] = 1
-    # Errors are being generated here for some cases where y is zero. I don't
-    # yet fully understand why though.
-    # result = np.where(np.isnan(x), np.nan, values * x)
-    # df = pd.read_csv('VHR_fs_dandrimont_gc.csv',index_col=0)
     result = np.where(clouded==0,values,np.nan)
 
-    del x
     i += 1
 
     band_name2 = ras2.GetRasterBand(band + 1).GetMetadata_Dict()[k_meta]
@@ -184,28 +167,20 @@ for band in range(ras.RasterCount):
             feat.SetGeometry(feat_geom)
             vect_tmp_lyr.CreateFeature(feat)
 
-            # print('check 1')
-
             xmin, xmax, ymin, ymax = feat_geom.GetEnvelope()
-            # pdb.set_trace()
 
             off_ulx, off_uly = map(int, gdal.ApplyGeoTransform(inv_gt2, xmin, ymax))
             off_lrx, off_lry = map(int, gdal.ApplyGeoTransform(inv_gt2, xmax, ymin))
             rows, columns = off_uly - off_lry + 1, off_lrx - off_ulx + 1
 
-            # pdb.set_trace()
             ras_tmp = gdal.GetDriverByName('MEM').Create('', columns, rows, 1, gdal.GDT_Byte)
             ras_tmp.SetProjection(ras2.GetProjection())
             ras_gt = list(gt2)
             ras_gt[0], ras_gt[3] = gdal.ApplyGeoTransform(gt, off_ulx, off_uly)
             ras_tmp.SetGeoTransform(ras_gt)
 
-            # print('check 2')
-
             gdal.RasterizeLayer(ras_tmp, [1], vect_tmp_lyr, burn_values=[1])
-            # print('check 2.01')
             mask = ras_tmp.GetRasterBand(1).ReadAsArray()
-            # print('check 2.02')
             # aa = off_uly
             # bb = off_lry + 1
             # cc = off_ulx
@@ -215,29 +190,19 @@ for band in range(ras.RasterCount):
             bb = off_lrx + 1
             cc = off_lry
             dd = off_uly + 1
-            # print('checkpoint 2.03')
-            # pdb.set_trace()
-            zone_ras = np.ma.masked_array(clouded[aa:bb, cc:dd], np.logical_not(mask), fill_value=np.nan)
-            # print('check 2.04')
-            zone_ras_list = zone_ras.compressed().tolist()
 
-            # print('check 2.1')
+            zone_ras = np.ma.masked_array(clouded[aa:bb, cc:dd], np.logical_not(mask), fill_value=np.nan)
+            zone_ras_list = zone_ras.compressed().tolist()
 
             maj = stat_algorithm['majority'](zone_ras_list)
             res = maj.tolist(), 2
-            # print('check 2.2')
-            # pdb.set_trace()
-            if id==38202:
-                pdb.set_trace()
+
             athroisma = float(sum(res[0]))
-            # print('check 2.3')
             #maj_value = res[1]
             if len(res[0])>1:
                 perc = float(res[0][1]/athroisma)
             else:
                 perc = 0
-
-            # print('check 3')
 
             vect_tmp_drv2 = ogr.GetDriverByName('MEMORY')
             vect_tmp_src2 = vect_tmp_drv2.CreateDataSource('')
@@ -252,8 +217,6 @@ for band in range(ras.RasterCount):
 
             xmin, xmax, ymin, ymax = feat_geom2.GetEnvelope()
 
-            # print('check 4')
-
             # Why weren't these updated below?
             off_ulx2, off_uly2 = map(int, gdal.ApplyGeoTransform(inv_gt2, xmin, ymax))
             off_lrx2, off_lry2 = map(int, gdal.ApplyGeoTransform(inv_gt2, xmax, ymin))
@@ -264,8 +227,6 @@ for band in range(ras.RasterCount):
             ras_gt = list(gt)
             ras_gt[0], ras_gt[3] = gdal.ApplyGeoTransform(gt, off_ulx2, off_uly2)
             ras_tmp.SetGeoTransform(ras_gt)
-
-            # print('check 5')
 
             gdal.RasterizeLayer(ras_tmp, [1], vect_tmp_lyr, burn_values=[1])
             mask = ras_tmp.GetRasterBand(1).ReadAsArray()
@@ -278,18 +239,12 @@ for band in range(ras.RasterCount):
             bb = off_lrx2 + 1
             cc = off_lry2
             dd = off_uly2 + 1
-            # print('pre')
-            # pdb.set_trace()
+
             zone_ras = np.ma.masked_array(result[aa:bb, cc:dd], np.logical_not(mask), fill_value=np.nan)
             zone_ras_init = np.ma.masked_array(values[aa:bb, cc:dd], np.logical_not(mask), fill_value=np.nan)
 
             zone_ras_list = zone_ras_init.compressed().tolist()
             zone_ras_list2 = zone_ras.compressed()#.tolist()
-
-            # print('checkpoint 5.03')
-            # pdb.set_trace()
-
-            # print('check 6')
 
             if perc > 0.8:
                 col_list.append(np.nan)

@@ -4,6 +4,7 @@
 # we can prompt the users to enter them on execution
 #
 SETTINGS = {
+    'working_directory': '/Users/gchoumos/Downloads/callisto_temp/Dutch_VHR/dandrimont_timeframe/2017',
     'shapefile': '/Users/gchoumos/Downloads/callisto_temp/shapefiles/lpis_dandrimond_area/lpis_dandrimond_3857.shp',
     'fs_filename': 'VHR_fs_dandrimont_gc.csv',
     'bands': [

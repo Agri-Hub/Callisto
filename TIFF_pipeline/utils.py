@@ -6,6 +6,24 @@ from settings import SETTINGS
 import os
 import pdb
 
+#####################################
+# Utility function -- Create Raster #
+#####################################
+'''Create a one-band GeoTIFF '''
+def create_raster(template_raster, template_path, np_data, data_type, nodata=None):
+    driver = gdal.GetDriverByName('GTiff')
+    out_ds = driver.Create(template_path, template_raster.RasterXSize, template_raster.RasterYSize, 1, data_type)
+    out_ds.SetProjection(template_raster.GetProjection())
+    out_ds.SetGeoTransform(template_raster.GetGeoTransform())
+    out_band = out_ds.GetRasterBand(1)
+    if nodata is not None:
+        out_band.SetNoDataValue(nodata)
+    out_band.WriteArray(np_data)
+    out_band.FlushCache()
+    out_band.ComputeStatistics(False)
+
+    return
+
 # Taken from S2 scripts
 def create_vrt(out_path_vrt, *rasters):
     ''' Create a VRT file - returns nothing '''

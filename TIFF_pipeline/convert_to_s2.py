@@ -30,6 +30,7 @@ for root, dirs, files in os.walk(workdir):
             print("  Filename: {0}".format(cloud_file))
             FILES_TO_PROCESS.append((os.path.join(root,file),cloudmask))
 
+
 for input, cloudmask in FILES_TO_PROCESS:
     print('Processing: {0}'.format(input.split('/')[-1]))
 

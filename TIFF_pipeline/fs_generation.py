@@ -7,6 +7,7 @@ from osgeo import osr
 from settings import SETTINGS
 from utils import *
 import numpy as np
+import pandas as pd
 import zipfile
 import fnmatch
 import csv
@@ -17,7 +18,7 @@ import re
 
 # This section needs to be rewritten
 # tile = SETTINGS['tiles'][0]
-outname = SETTINGS['fs_filename']
+outname = SETTINGS['feature_space_filename']
 id_colname = "id"
 
 # Doesn't make sense when its getcwd but it may change (most probably)
@@ -36,7 +37,7 @@ order = {
 }
 number_of_bands = len(order)
 
-stat_algorithm = {
+stat_algorithms = {
     'mean': np.mean,
     'max': np.max,
     'min': np.min,
@@ -48,9 +49,16 @@ orderedbands = []
 band_cloudmasks = {}
 acquisitions = {}
 for root, dirs, files in sorted(os.walk(workdir)):
+    # We are looking for tif files as a first-level check - Becomes more specific below
     for tif in fnmatch.filter(files, '*.tif'):
+        # January and February were skipped. Do we really want to skip them? (Maybe we do,
+        # especially if they are mostly noisy and impact the results). Or maybe it is just
+        # a remnant of a past test and needs to be renoved. Check it
         if any(x in tif for x in ['Jan', 'Feb']):
             continue
+        # This matches the VHR files that were created after the S2-like convertion.
+        # They follow a pattern like the regex implies, but it needs to be improved
+        # to something that makes more sense
         if re.match('(.*)(BLUE|GREEN|RED|NIR)(.*)(intersection)(.*)', tif):
             bands.append(os.path.join(root, tif))
             orderedbands.append('')
@@ -63,9 +71,9 @@ for root, dirs, files in sorted(os.walk(workdir)):
                 acquisitions[acq]['ordered_bands'] = []
             acquisitions[acq]['bands'].append(os.path.join(root,tif)) # and append it
             acquisitions[acq]['ordered_bands'].append('')
-        # Now check if it is a TRIPLESAT acquisition. We will use this info
-        # to get the proper cloudmask path
-        if re.match('TRIPLESAT(.*)',tif):
+        # Now check if it is a TRIPLESAT acquisition, get the proper cloudmask.
+        # (we know where to find it)
+        if re.match('TRIPLESAT(.*)(BLUE|GREEN|RED|NIR)(.*)(intersection)(.*)',tif):
             print('  It is a TRIPLESAT acquisition')
             # We know where to find the cloudmask in this case
             cloud_dir = '/'.join(root.split('/')[:-1]) + '/Cloudmask'
@@ -84,6 +92,7 @@ for acq in acquisitions.items():
     for item in acq_dict['bands']:
         print(item)
 
+output_csvs = []
 iteration = 0
 for acq in acquisitions.items():
     iteration += 1
@@ -155,10 +164,12 @@ for acq in acquisitions.items():
     second = []
     i = 0
 
-
     out_csv = os.path.join(workdir, outname)
-    # TEMP
-    out_csv = os.path.join(workdir, 'VHR_fs_dandrimont_{}.csv'.format(iteration))
+    # TEMP - This should probably be permanent and not temporary.
+    # I think we could merge the csv files on the fly. So all the iteration csv files
+    # could be merged into a single result, as part of this script.
+    out_csv = os.path.join(workdir, 'VHR_fs_dandrimont_test_{}.csv'.format(iteration))
+    output_csvs.append(out_csv)
 
     for band in range(ras.RasterCount):
         k_meta = 'Band_%d' % (band + 1)
@@ -232,7 +243,7 @@ for acq in acquisitions.items():
                 zone_ras = np.ma.masked_array(clouded[aa:bb, cc:dd], np.logical_not(mask), fill_value=np.nan)
                 zone_ras_list = zone_ras.compressed().tolist()
 
-                maj = stat_algorithm['majority'](zone_ras_list)
+                maj = stat_algorithms['majority'](zone_ras_list)
                 res = maj.tolist(), 2
 
                 athroisma = float(sum(res[0]))
@@ -317,9 +328,22 @@ for acq in acquisitions.items():
         # del clouded
         del result
 
+    # Instead of doing this, we could maybe merge the dataframes/csvs instead
     rows = zip(*total)
     with open(out_csv, 'w') as f:
         writer = csv.writer(f)
         for row in rows:
             # print row
             writer.writerow(row)
+
+# Create a merged version
+# Maybe worth removing the single-acquisition CSVs after the merge
+# read the 1st csv
+merged_dataframe = pd.read_csv(output_csvs[0], index_col='id')
+for i in range(1,len(output_csvs)):
+    to_merge = pd.read_csv(output_csvs[i], index_col='id')
+    print("merging csv files ...")
+    merged_dataframe = pd.merge(merged_dataframe, to_merge, on='id', how='inner')
+
+# Create the final csv file after merging everything
+merged_dataframe.to_csv(outname)

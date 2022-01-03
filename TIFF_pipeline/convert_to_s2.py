@@ -228,13 +228,18 @@ for input, cloudmask in FILES_TO_PROCESS:
         # Get the file paths (this needs to be automated)
         # cloudmask_file_shp_reprojected = os.path.join(os.getcwd(), '../Cloudmask/cloudmask.shp')
         cloudmask_file_shp_reprojected = '/' + '/'.join(cloudmask.split('/')[:-1]) + '/cloudmask.shp'
+        cloudmask_file_out_temp_tif = '/' + '/'.join(cloudmask.split('/')[:-1]) + '/cloudmask_temp.tif'
         cloudmask_file_out_tif = '/' + '/'.join(cloudmask.split('/')[:-1]) + '/cloudmask.tif'
 
         # Reproject the cloud mask to EPSG:3857
         os.system('ogr2ogr -t_srs EPSG:3857 {0} {1}'.format(cloudmask_file_shp_reprojected, cloudmask))
 
         # Convert the cloudmask shapefile to raster
-        convert2Raster(cloudmask_file_shp_reprojected, cloudmask_file_out_tif)
+        convert2Raster(cloudmask_file_shp_reprojected, cloudmask_file_out_temp_tif)
+        # We need to apply gdalwarp once more to fix the positive n-s resolution
+        # (the resolution of Y should be negative). Then, remove the intermediate cloudmask tif file
+        os.system('gdalwarp -t_srs EPSG:3857 {0} {1}'.format(cloudmask_file_out_temp_tif, cloudmask_file_out_tif))
+        os.system('rm {0}'.format(cloudmask_file_out_temp_tif))
 
         print("Cloudmask converted to tiff")
 

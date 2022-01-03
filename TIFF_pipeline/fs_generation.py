@@ -220,7 +220,7 @@ for acq in acquisitions.items():
 
                 off_ulx, off_uly = map(int, gdal.ApplyGeoTransform(inv_gt2, xmin, ymax))
                 off_lrx, off_lry = map(int, gdal.ApplyGeoTransform(inv_gt2, xmax, ymin))
-                rows, columns = off_uly - off_lry + 1, off_lrx - off_ulx + 1
+                rows, columns = (off_lry - off_uly) + 1, (off_lrx - off_ulx) + 1
 
                 ras_tmp = gdal.GetDriverByName('MEM').Create('', columns, rows, 1, gdal.GDT_Byte)
                 ras_tmp.SetProjection(ras2.GetProjection())
@@ -230,15 +230,10 @@ for acq in acquisitions.items():
 
                 gdal.RasterizeLayer(ras_tmp, [1], vect_tmp_lyr, burn_values=[1])
                 mask = ras_tmp.GetRasterBand(1).ReadAsArray()
-                # aa = off_uly
-                # bb = off_lry + 1
-                # cc = off_ulx
-                # dd = off_lrx + 1
-                ### GC Change
-                aa = off_ulx
-                bb = off_lrx + 1
-                cc = off_lry
-                dd = off_uly + 1
+                aa = off_uly
+                bb = off_lry + 1
+                cc = off_ulx
+                dd = off_lrx + 1
 
                 zone_ras = np.ma.masked_array(clouded[aa:bb, cc:dd], np.logical_not(mask), fill_value=np.nan)
                 zone_ras_list = zone_ras.compressed().tolist()
@@ -266,11 +261,9 @@ for acq in acquisitions.items():
 
                 xmin, xmax, ymin, ymax = feat_geom2.GetEnvelope()
 
-                # Why weren't these updated below?
                 off_ulx2, off_uly2 = map(int, gdal.ApplyGeoTransform(inv_gt2, xmin, ymax))
                 off_lrx2, off_lry2 = map(int, gdal.ApplyGeoTransform(inv_gt2, xmax, ymin))
-                # rows2, columns2 = off_lry2 - off_uly2 + 1, off_lrx2 - off_ulx2 + 1
-                rows2, columns2 = off_uly2 - off_lry2 + 1, off_lrx2 - off_ulx2 + 1
+                rows2, columns2 = off_lry2 - off_uly2 + 1, off_lrx2 - off_ulx2 + 1
                 ras_tmp = gdal.GetDriverByName('MEM').Create('', columns2, rows2, 1, gdal.GDT_Byte)
                 ras_tmp.SetProjection(ras.GetProjection())
                 ras_gt = list(gt)
@@ -279,15 +272,10 @@ for acq in acquisitions.items():
 
                 gdal.RasterizeLayer(ras_tmp, [1], vect_tmp_lyr, burn_values=[1])
                 mask = ras_tmp.GetRasterBand(1).ReadAsArray()
-                # aa = off_uly
-                # bb = off_lry + 1
-                # cc = off_ulx
-                # dd = off_lrx + 1
-                ### GC Change
-                aa = off_ulx2
-                bb = off_lrx2 + 1
-                cc = off_lry2
-                dd = off_uly2 + 1
+                aa = off_uly
+                bb = off_lry + 1
+                cc = off_ulx
+                dd = off_lrx + 1
 
                 zone_ras = np.ma.masked_array(result[aa:bb, cc:dd], np.logical_not(mask), fill_value=np.nan)
                 zone_ras_init = np.ma.masked_array(values[aa:bb, cc:dd], np.logical_not(mask), fill_value=np.nan)

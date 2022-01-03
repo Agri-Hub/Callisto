@@ -4,8 +4,8 @@
 # we can prompt the users to enter them on execution
 #
 SETTINGS = {
-    'working_directory': '/Users/gchoumos/Downloads/callisto_temp/Dutch_VHR/dandrimont_timeframe/2017',
-    'shapefile': '/Users/gchoumos/Downloads/callisto_temp/shapefiles/lpis_dandrimond_area/lpis_dandrimond_3857.shp',
+    'working_directory': '/Users/george/Downloads/callisto_temp/Dutch_VHR/dandrimont_timeframe/2017',
+    'shapefile': '/Users/george/Downloads/callisto_temp/shapefiles/lpis_dandrimond_area/lpis_dandrimond_3857.shp',
     'feature_space_filename': 'VHR_fs_dandrimont.csv',
     'bands': [
         'B02_10m.tif', 'B03_10m.tif', 'B04_10m.tif', 'B05_10m.tif',

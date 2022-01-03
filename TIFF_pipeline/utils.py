@@ -5,6 +5,9 @@ from osgeo import osr
 from settings import SETTINGS
 import os
 import pdb
+import json
+import matplotlib.pyplot as plt
+from descartes import PolygonPatch
 
 #####################################
 # Utility function -- Create Raster #
@@ -178,3 +181,13 @@ def clip_raster(input_tif, clip_tif):
 
     return
 
+
+def plot_geometry(geometry):
+    geom_string = geometry.ExportToJson()
+    geom_dict = json.loads(geom_string)
+    BLUE = '#6699cc'
+    fig = plt.figure()
+    ax = fig.gca()
+    ax.add_patch(PolygonPatch(geom_dict, fc=BLUE, ec=BLUE, alpha=0.5, zorder=2 ))
+    ax.axis('scaled')
+    plt.show()

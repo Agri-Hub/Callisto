@@ -125,8 +125,8 @@ for input, cloudmask in FILES_TO_PROCESS:
             # '{0}_{1}.{2}'.format(file_prefix, proj_name_part, file_suffix),
             VHR_repr_filenames[band],
             file,
-            xRes = 10,
-            yRes = 10,
+            # xRes = 10,
+            # yRes = 10,
             dstSRS=s2_proj,
             resampleAlg='bilinear'
         )
@@ -241,6 +241,18 @@ for input, cloudmask in FILES_TO_PROCESS:
         os.system('gdalwarp -t_srs EPSG:3857 {0} {1}'.format(cloudmask_file_out_temp_tif, cloudmask_file_out_tif))
         os.system('rm {0}'.format(cloudmask_file_out_temp_tif))
 
+        # Try to have the cloudmask match the resolution of the other tiff files
+        # The resolution should be computed from the other files, not hardcoded
+        src_mask = gdal.Open(VHR_repr_filenames['NIR'])
+        _, cloud_xres, _, _, _, cloud_yres  = src_mask.GetGeoTransform()
+        os.system('gdalwarp -tr {0} {1} -r bilinear {2} {3}'
+            .format(
+                cloud_xres, cloud_yres, cloudmask_file_out_tif, cloudmask_file_out_temp_tif,
+            )
+        )
+        os.system('rm {0}'.format(cloudmask_file_out_tif))
+        os.system('mv {0} {1}'.format(cloudmask_file_out_temp_tif, cloudmask_file_out_tif))
+
         print("Cloudmask converted to tiff")
 
 
@@ -274,7 +286,7 @@ for input, cloudmask in FILES_TO_PROCESS:
         ###
         # clip_raster(os.path.join(os.getcwd(),f), os.path.join(os.getcwd(),'../Cloudmask/cloudmask.tif'))
         ### Trying warp
-        os.system('gdalwarp -te {0} {1} {2} {3} -tr 10 10 -r bilinear {4} {5}'
+        os.system('gdalwarp -te {0} {1} {2} {3} -r bilinear {4} {5}'
             .format(
                 cl_xmin,
                 cl_ymin,

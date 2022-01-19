@@ -2,8 +2,7 @@ import geopandas
 import pandas as pd
 from shapely.geometry import Point, Polygon
 import matplotlib.pyplot as plt
-from deep_translator import (GoogleTranslator, PonsTranslator, LingueeTranslator, MyMemoryTranslator, YandexTranslator, 
-                            DeepL, QCRI, single_detection, batch_detection)
+from deep_translator import GoogleTranslator
 from datetime import datetime, timezone, timedelta
 import json, time, math
 

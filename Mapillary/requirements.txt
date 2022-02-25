@@ -1,0 +1,10 @@
+mercantile
+requests
+vt2geojson
+fiona
+geopandas
+shapely
+pyproj
+pandas
+matplotlib
+deep_translator

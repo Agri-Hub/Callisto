@@ -1,3 +1,6 @@
+
+If you use this implementation, please cite the publication below:
+
 ### Reference
 
 If you use this dataset please cite the publication below

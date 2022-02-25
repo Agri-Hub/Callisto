@@ -20,7 +20,7 @@ pip install -r requirements.txt
 
 ## Reference
 
-If you use this dataset please cite the publication below
+If you use this repository please cite the publication below
 
 ```
 @proceedings{sitokonstantinou_vasileios_2022_5845512,

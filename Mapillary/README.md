@@ -22,7 +22,8 @@ pip install -r requirements.txt
 
 If you use this repository please cite the publication below
 
-```
+<!--
+```bibtex
 @inproceedings{sitokonstantinou2022datacap,
   title={DataCAP: A Satellite Datacube and Crowdsourced Street-Level Images for the Monitoring of the Common Agricultural Policy},
   author={Sitokonstantinou, Vasileios and Koukos, Alkiviadis and Drivas, Thanassis and Kontoes, Charalampos and Karathanassi, Vassilia},
@@ -32,3 +33,4 @@ If you use this repository please cite the publication below
   organization={Springer}
 }
 ```
+-->

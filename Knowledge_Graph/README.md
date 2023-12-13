@@ -5,7 +5,7 @@ The <a name="CALLISTO ontology" href='https://zenodo.org/record/8268090'>CALLIST
 
 Examples of SPARQL queries to execute on the knowledge graph.
 
-1. Return two parcels that are more than 10 square meters(m2) apart, and calculate their distance:
+1. Return two parcels that are more than 10 square meters(m2) apart, and calculate their distance.
 
 ```
     PREFIX geo: <http://www.opengis.net/ont/geosparql#>
@@ -24,7 +24,7 @@ Examples of SPARQL queries to execute on the knowledge graph.
 ```
 -----
 
-2. Return all Tweets that made reference to pollution within the boundaries of Germany:
+2. Return all Tweets that made reference to pollution within the boundaries of Germany.
 ```
     PREFIX tweets: <https://purl.archive.org/callisto/>
     
@@ -46,7 +46,174 @@ Examples of SPARQL queries to execute on the knowledge graph.
         BIND( REPLACE( ?location_name , '.*(, )', '' ) AS ?country_name).
     }
 ```
+-----
+3. Return the parcels which have decisions with low confidence.
 
+```
+    PREFIX sosa: <http://www.w3.org/ns/sosa/>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX CAP: <https://purl.archive.org/callisto/>
+    PREFIX geo_f: <http://www.opengis.net/ont/geosparql#>
+
+    SELECT ?Parcel ?Geographical_Location ?Declared_Crop ?Crop_Category ?Predicted_Crop_Category ?Prediction_Confidence
+    WHERE 
+    {
+            ?Parcel a CAP:Parcel.
+            ?Parcel CAP:declared ?dec_crop;
+                    geo_f:hasGeometry ?geo.
+            ?geo geo_f:asWKT ?Geographical_Location.
+            ?cmo CAP:predicted ?pred_crop;
+                 CAP:confidenceOfPrediction ?Prediction_Confidence;
+            sosa:hasFeatureOfInterest ?Parcel.
+            ?dec_crop CAP:cropName ?Declared_Crop;
+                      CAP:cropCategory ?Crop_Category.
+            ?pred_crop CAP:cropCategory ?Predicted_Crop_Category.
+    }
+    ORDER BY ASC(?Prediction_Confidence)
+```
+-----
+4. Return all parcels that have conflict (disagreement) with high confidence.
+
+```
+    PREFIX sosa: <http://www.w3.org/ns/sosa/>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX CAP: <https://purl.archive.org/callisto/>
+    PREFIX geo_f: <http://www.opengis.net/ont/geosparql#>
+    
+    SELECT ?Parcel ?Geographical_Location ?Declared_Crop ?Crop_Category ?Predicted_Crop_Category ?Prediction_Confidence
+    WHERE 
+    {
+            ?Parcel a CAP:Parcel.
+            ?Parcel CAP:declared ?dec_crop;
+                    geo_f:hasGeometry ?geo.
+            ?geo geo_f:asWKT ?Geographical_Location.
+            ?cmo CAP:predicted ?pred_crop;
+                 CAP:confidenceOfPrediction ?Prediction_Confidence;
+            sosa:hasFeatureOfInterest ?Parcel.
+            ?dec_crop CAP:cropName ?Declared_Crop;
+                      CAP:cropCategory ?Crop_Category.
+            ?pred_crop CAP:cropCategory ?Predicted_Crop_Category.
+            Filter(?Predicted_Crop_Category = "Non_Grassland").
+    }
+    ORDER BY DESC(?Prediction_Confidence)
+```
+-----
+5. Find the parcels that are close to the assumed basin X; less than 200 square
+meters distance.
+
+```
+    PREFIX geo: <http://www.opengis.net/ont/geosparql#>
+    PREFIX uom: <http://www.opengis.net/def/uom/OGC/1.0/>
+    PREFIX CALLISTO: <https://purl.archive.org/callisto/>
+    PREFIX geofunc: <http://www.opengis.net/def/function/geosparql/>
+    
+    SELECT ?Parcel ?parcel_location ?Basin ?basin_location ?Distance
+    WHERE
+    {
+            ?Parcel a CALLISTO:Parcel.
+            ?Parcel geo:hasGeometry ?parcel_geo.
+            ?parcel_geo geo:asWKT ?parcel_location.
+            ?Basin CALLISTO:reservoirName "Lagoon basin";
+                   geo:hasGeometry ?basin_geo.
+            ?basin_geo geo:asWKT ?basin_location.
+            BIND(geofunc:distance(?basin_location, ?parcel_location, uom:metre) as ?Distance).
+            FILTER(?Distance>0 && ?Distance<200).
+            FILTER(?basin_geo != ?parcel_geo)
+    }
+    ORDER BY ASC(?Distance)
+```
+-----
+6. Return the worst air quality day in Berlin in 2022.
+
+```
+    PREFIX sosa: <http://www.w3.org/ns/sosa/>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX airquality: <https://purl.archive.org/callisto/>
+    
+    SELECT ?stationCode ?time ?result ?name ?level
+    WHERE 
+    {
+                ?station a airquality:AirQualityStation.
+                ?station airquality:hasName ?stationCode.
+                ?ob sosa:hasFeatureOfInterest ?station;
+                    sosa:resultTime ?time;
+                    sosa:hasResult ?result;
+                    airquality:evaluatedBy ?parameter;
+                airquality:characterizationLevel ?level.
+                ?parameter airquality:parameterName ?name.
+                FILTER (CONTAINS(?level,"Bad"))
+    }
+    ORDER BY DESC(?result)
+```
+-----
+7. Return the worst months that had air quality parameters with "Bad" level.
+
+```
+    PREFIX sosa: <http://www.w3.org/ns/sosa/>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    PREFIX airquality: <https://purl.archive.org/callisto/>
+    
+    SELECT ?Month ?Parameter_Name (MAX(?result) AS ?Max_Result)
+    WHERE {
+                ?station a airquality:AirQualityStation.
+                ?station airquality:hasName ?stationCode.
+                ?ob sosa:hasFeatureOfInterest ?station;
+                    sosa:resultTime ?time;
+                    sosa:hasResult ?result;
+                    airquality:evaluatedBy ?parameter;
+                    airquality:characterizationLevel ?level.
+                ?parameter airquality:parameterName ?Parameter_Name.
+                FILTER(?level = 'Bad').
+                BIND(xsd:string(MONTH(xsd:dateTime(?time))) AS ?Month).
+    }
+    GROUP BY ?Parameter_Name ?Month
+    ORDER BY ASC(?month) desc(?Max_Result)
+```
+-----
+8. Return the highest/lowest concentration of PM2.5 and PM10 pollutants in
+2022.
+
+```
+    PREFIX sosa: <http://www.w3.org/ns/sosa/>
+    PREFIX owl: <http://www.w3.org/2002/07/owl#>
+    PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+    PREFIX airquality: <https://purl.archive.org/callisto/>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+    
+    SELECT ?Parameter_Name(MIN(?result) AS ?Min_Result)(MAX(?result) AS ?Max_Result)
+    WHERE
+    {
+        {
+            ?ob a sosa:Observation.
+            ?ob sosa:resultTime ?time;
+                sosa:hasResult ?result;
+                airquality:evaluatedBy ?parameter.
+            ?parameter airquality:parameterName ?Parameter_Name.
+            BIND(concat(xsd:string(DAY(xsd:dateTime(?time))), '-',
+            xsd:string(MONTH(xsd:dateTime(?time)))) AS ?Observation_Day).
+            BIND( xsd:string(YEAR(xsd:dateTime(?time))) AS ?year).
+            FILTER(CONTAINS(?Parameter_Name,"pm10"))
+            FILTER(CONTAINS(?year, "2022"))
+        }
+    union
+        {
+            ?ob a sosa:Observation.
+            ?ob sosa:resultTime ?time;
+                sosa:hasResult ?result;
+                airquality:evaluatedBy ?parameter.
+            ?parameter airquality:parameterName ?Parameter_Name.
+            BIND(concat(xsd:string(DAY(xsd:dateTime(?time))), '-',
+            xsd:string(MONTH(xsd:dateTime(?time)))) AS ?Observation_Day).
+            BIND( xsd:string(YEAR(xsd:dateTime(?time))) AS ?year).
+            FILTER(CONTAINS(?Parameter_Name,"pm25"))
+            FILTER(CONTAINS(?year, "2022"))
+        }
+    }
+    GROUP BY ?Parameter_Name
+    ORDER BY ASC(?Min_Result) DESC(?Max_Result)
+```
 
 
 
